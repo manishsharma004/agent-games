@@ -10,7 +10,7 @@ export function SetupPanel({ onStart }: SetupPanelProps) {
   const [xType, setXType] = useState<'human' | 'agent'>('human');
   const [oType, setOType] = useState<'human' | 'agent'>('agent');
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('gemma3:4b');
+  const [model, setModel] = useState('gemma4:e2b');
   const [baseURL, setBaseURL] = useState('http://localhost:11434/api/chat');
 
   const needsAgent = xType === 'agent' || oType === 'agent';
@@ -66,7 +66,7 @@ export function SetupPanel({ onStart }: SetupPanelProps) {
             <input
               value={model}
               onChange={(e) => setModel(e.target.value)}
-              placeholder="gemma3:4b"
+              placeholder="gemma4:e2b"
             />
           </label>
           <label>

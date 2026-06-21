@@ -2,18 +2,29 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { GameBoard } from './components/GameBoard'
 import { SetupPanel } from './components/SetupPanel'
 import type { AgentConfig } from './game/agent'
-import { agentMove } from './game/agent'
+import { agentMove, buildUserPrompt } from './game/agent'
 import { applyMove, createInitialState, startGame } from './game/engine'
 import type { GameState, PlayerConfig, Position } from './game/types'
 import './App.css'
+
+interface ChatMessage {
+  id: number
+  role: 'user' | 'agent'
+  text: string
+  thinking?: string
+  move?: Position
+}
 
 function App() {
   const [gameState, setGameState] = useState<GameState>(createInitialState())
   const [players, setPlayers] = useState<PlayerConfig>({ X: 'human', O: 'agent' })
   const [agentConfig, setAgentConfig] = useState<AgentConfig | undefined>()
   const [agentThinking, setAgentThinking] = useState(false)
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [error, setError] = useState<string | null>(null)
   const agentBusy = useRef(false)
+  const chatScrollRef = useRef<HTMLDivElement>(null)
+  const nextMsgId = useRef(0)
 
   const isPlaying = gameState.status === 'playing'
   const isOver = gameState.status === 'won' || gameState.status === 'draw'
@@ -25,8 +36,35 @@ function App() {
     agentBusy.current = true
     setAgentThinking(true)
     setError(null)
-    agentMove(gameState, agentConfig)
+
+    const userMsgId = nextMsgId.current++
+    const agentMsgId = nextMsgId.current++
+    setChatMessages((prev) => [
+      ...prev,
+      { id: userMsgId, role: 'user', text: buildUserPrompt(gameState) },
+      { id: agentMsgId, role: 'agent', text: '', thinking: '' },
+    ])
+
+    agentMove(gameState, agentConfig, (type, token) => {
+      setChatMessages((prev) =>
+        prev.map((m) =>
+          m.id === agentMsgId
+            ? type === 'thinking'
+              ? { ...m, thinking: (m.thinking ?? '') + token }
+              : { ...m, text: m.text + token }
+            : m,
+        ),
+      )
+      requestAnimationFrame(() => {
+        if (chatScrollRef.current) {
+          chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+        }
+      })
+    })
       .then((position: Position) => {
+        setChatMessages((prev) =>
+          prev.map((m) => (m.id === agentMsgId ? { ...m, move: position } : m)),
+        )
         setGameState((prev) => applyMove(prev, { position, marker: prev.currentTurn }))
       })
       .catch((err: unknown) => {
@@ -62,6 +100,7 @@ function App() {
   const handleRestart = useCallback(() => {
     agentBusy.current = false
     setAgentThinking(false)
+    setChatMessages([])
     setError(null)
     setGameState(startGame(createInitialState()))
   }, [])
@@ -69,6 +108,7 @@ function App() {
   const handleChangeSetup = useCallback(() => {
     agentBusy.current = false
     setAgentThinking(false)
+    setChatMessages([])
     setError(null)
     setGameState(createInitialState())
   }, [])
@@ -117,6 +157,34 @@ function App() {
             </span>
           ))}
         </div>
+        {chatMessages.length > 0 && (
+          <div className="chat-panel" ref={chatScrollRef}>
+            {chatMessages.map((msg) => (
+              <div key={msg.id} className={`chat-msg chat-msg--${msg.role}`}>
+                <div className="chat-msg__label">
+                  {msg.role === 'user' ? '🧑 You' : '🤖 Agent'}
+                </div>
+                <div className="chat-msg__bubble">
+                  {msg.role === 'agent' && (msg.thinking ?? '').length > 0 && (
+                    <details className="chat-thinking">
+                      <summary className="chat-thinking__summary">🧠 Thinking</summary>
+                      <pre className="chat-thinking__body">{msg.thinking}</pre>
+                    </details>
+                  )}
+                  {msg.text && (
+                    <p className="chat-msg__text">{msg.text}</p>
+                  )}
+                  {msg.role === 'agent' && msg.move !== undefined && (
+                    <p className="chat-msg__move">📍 Placed at position {msg.move}</p>
+                  )}
+                  {msg.role === 'agent' && !msg.text && !(msg.thinking ?? '').length && msg.move === undefined && (
+                    <span className="chat-msg__placeholder">…</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
