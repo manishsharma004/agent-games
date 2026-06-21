@@ -1,4 +1,7 @@
-import React, { useEffect, useRef } from 'react'
+import React from 'react'
+import { ChatContainer } from './ui/chat-container'
+import { Message } from './ui/message'
+import { Reasoning } from './ui/reasoning'
 
 interface ChatMessage {
   id: string
@@ -11,48 +14,47 @@ interface ChatMessage {
 interface ChatUIProps {
   messages: ChatMessage[]
   className?: string
+  isStreaming?: boolean
 }
 
-export const ChatUI: React.FC<ChatUIProps> = ({ messages, className }) => {
-  const scrollRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
+export const ChatUI: React.FC<ChatUIProps> = ({ messages, className, isStreaming }) => {
   return (
-    <div className={className ? `chat-panel ${className}` : 'chat-panel'}>
+    <ChatContainer className={className}>
       {messages.length === 0 ? (
         <div className="chat-empty">
           <strong>Agent chat ready</strong>
           <span>The model will stream its reasoning and move here.</span>
         </div>
       ) : (
-        messages.map((msg) => (
-          <div key={msg.id} className={`chat-message chat-message--${msg.role}`}>
-            <div className="chat-message__meta">
-              {msg.role === 'user' ? 'You' : 'Agent'}
-            </div>
-            <div className="chat-message__bubble">
-              {msg.role === 'assistant' && msg.thinking && (
-                <details className="chat-thinking" open>
-                  <summary className="chat-thinking__summary">Thinking</summary>
-                  <div className="chat-thinking__body">{msg.thinking}</div>
-                </details>
+        messages.map((msg, index) => {
+          const isLastMsg = index === messages.length - 1
+          const streaming = isLastMsg && !!isStreaming
+
+          if (msg.role === 'user') {
+            return <Message key={msg.id} role="user" content={msg.text} />
+          }
+
+          return (
+            <Message key={msg.id} role="assistant" isStreaming={streaming}>
+              {msg.thinking && (
+                <Reasoning
+                  content={msg.thinking}
+                  isOpen={true}
+                  isStreaming={streaming}
+                />
               )}
-              {msg.text && <div className="chat-message__text">{msg.text}</div>}
-              {msg.role === 'assistant' && msg.move !== undefined && (
-                <div className="chat-message__move">📍 Move: {msg.move}</div>
+              {msg.text && <div className="text-sm">{msg.text}</div>}
+              {msg.move !== undefined && (
+                <div className="text-sm mt-1">📍 Move: {msg.move}</div>
               )}
-              {msg.role === 'assistant' && !msg.text && !msg.thinking && msg.move === undefined && (
-                <span className="chat-message__placeholder">…</span>
+              {!msg.text && !msg.thinking && msg.move === undefined && (
+                <span className="text-muted-foreground">…</span>
               )}
-            </div>
-          </div>
-        ))
+            </Message>
+          )
+        })
       )}
-      <div ref={scrollRef} />
-    </div>
+    </ChatContainer>
   )
 }
 

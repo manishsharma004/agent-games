@@ -172,6 +172,7 @@ function App() {
             <ChatUI
               messages={chatMessages}
               className="chat-panel"
+              isStreaming={agentThinking}
             />
           </div>
         </>
