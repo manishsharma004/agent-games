@@ -16,8 +16,8 @@ export function SetupPanel({ onStart }: SetupPanelProps) {
   const needsAgent = xType === 'agent' || oType === 'agent';
 
   function handleStart() {
-    const agentConfig: AgentConfig | undefined = needsAgent
-      ? { apiKey: apiKey || undefined, model, baseURL }
+    const agentConfig: AgentConfig | undefined = needsAgent && apiKey
+      ? { apiKey, model, baseURL }
       : undefined;
     onStart({ X: xType, O: oType }, agentConfig);
   }

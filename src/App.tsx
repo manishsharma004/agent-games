@@ -131,58 +131,65 @@ function App() {
 
   return (
     <div className="app">
-      <div className="game-container">
+      <div className="layout-header">
         <h1 className="title">Tic-Tac-Toe</h1>
-        <div className={`status-bar${isOver ? ' status-bar--over' : ''}`}>{statusText}</div>
-        {error && <div className="error-msg">⚠️ {error}</div>}
-        <GameBoard
-          board={gameState.board}
-          onCellClick={handleCellClick}
-          disabled={!isPlaying || currentPlayerType === 'agent' || agentThinking}
-        />
-        <div className="action-row">
-          <button className="restart-btn" onClick={handleRestart}>
-            {isOver ? '🔄 Play Again' : '↩ Restart'}
-          </button>
-          {isOver && (
-            <button className="setup-btn" onClick={handleChangeSetup}>
-              ⚙️ Change Setup
+      </div>
+      <div className="layout-container">
+        <div className="game-section">
+          <div className={`status-bar${isOver ? ' status-bar--over' : ''}`}>{statusText}</div>
+          {error && <div className="error-msg">⚠️ {error}</div>}
+          <GameBoard
+            board={gameState.board}
+            onCellClick={handleCellClick}
+            disabled={!isPlaying || currentPlayerType === 'agent' || agentThinking}
+          />
+          <div className="action-row">
+            <button className="restart-btn" onClick={handleRestart}>
+              {isOver ? '🔄 Play Again' : '↩ Restart'}
             </button>
-          )}
-        </div>
-        <div className="players-legend">
-          {(['X', 'O'] as const).map((m) => (
-            <span key={m} className={`legend-item legend-item--${m.toLowerCase()}`}>
-              <strong>{m}</strong> {players[m] === 'agent' ? '🤖 Agent' : '🧑 Human'}
-            </span>
-          ))}
+            {isOver && (
+              <button className="setup-btn" onClick={handleChangeSetup}>
+                ⚙️ Change Setup
+              </button>
+            )}
+          </div>
+          <div className="players-legend">
+            {(['X', 'O'] as const).map((m) => (
+              <span key={m} className={`legend-item legend-item--${m.toLowerCase()}`}>
+                <strong>{m}</strong> {players[m] === 'agent' ? '🤖 Agent' : '🧑 Human'}
+              </span>
+            ))}
+          </div>
         </div>
         {chatMessages.length > 0 && (
-          <div className="chat-panel" ref={chatScrollRef}>
-            {chatMessages.map((msg) => (
-              <div key={msg.id} className={`chat-msg chat-msg--${msg.role}`}>
-                <div className="chat-msg__label">
-                  {msg.role === 'user' ? '🧑 You' : '🤖 Agent'}
+          <div className="chat-section" ref={chatScrollRef}>
+            <div className="chat-header">Chat History</div>
+            <div className="chat-panel">
+              {chatMessages.map((msg) => (
+                <div key={msg.id} className={`chat-msg chat-msg--${msg.role}`}>
+                  <div className="chat-msg__label">
+                    {msg.role === 'user' ? '🧑 You' : '🤖 Agent'}
+                  </div>
+                  <div className="chat-msg__bubble">
+                    {msg.role === 'agent' && (msg.thinking ?? '').length > 0 && (
+                      <details className="chat-thinking" open>
+                        <summary className="chat-thinking__summary">💭 Thinking Process</summary>
+                        <div className="chat-thinking__body">{msg.thinking}</div>
+                      </details>
+                    )}
+                    {msg.text && (
+                      <div className="chat-msg__text">{msg.text}</div>
+                    )}
+                    {msg.role === 'agent' && msg.move !== undefined && (
+                      <div className="chat-msg__move">📍 Placed at position {msg.move}</div>
+                    )}
+                    {msg.role === 'agent' && !msg.text && !(msg.thinking ?? '').length && msg.move === undefined && (
+                      <span className="chat-msg__placeholder">…</span>
+                    )}
+                  </div>
                 </div>
-                <div className="chat-msg__bubble">
-                  {msg.role === 'agent' && (msg.thinking ?? '').length > 0 && (
-                    <details className="chat-thinking">
-                      <summary className="chat-thinking__summary">🧠 Thinking</summary>
-                      <pre className="chat-thinking__body">{msg.thinking}</pre>
-                    </details>
-                  )}
-                  {msg.text && (
-                    <p className="chat-msg__text">{msg.text}</p>
-                  )}
-                  {msg.role === 'agent' && msg.move !== undefined && (
-                    <p className="chat-msg__move">📍 Placed at position {msg.move}</p>
-                  )}
-                  {msg.role === 'agent' && !msg.text && !(msg.thinking ?? '').length && msg.move === undefined && (
-                    <span className="chat-msg__placeholder">…</span>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>

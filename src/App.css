@@ -2,29 +2,98 @@
 .app {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   min-height: 100svh;
-  padding: 32px 16px;
+  width: 100%;
+  padding: 0;
   box-sizing: border-box;
+  background: var(--bg);
 }
 
-.game-container {
+.layout-header {
+  padding: 20px 32px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.layout-container {
+  display: flex;
+  flex: 1;
+  gap: 24px;
+  padding: 24px 32px;
+  overflow: hidden;
+}
+
+.game-section {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  width: 100%;
-  max-width: 420px;
+  gap: 16px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.chat-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 50%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--code-bg) 50%, transparent);
+  overflow: hidden;
+  max-height: calc(100vh - 140px);
+}
+
+.chat-header {
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-h);
+  background: var(--accent-bg);
+  border-bottom: 1px solid var(--accent-border);
+  text-align: left;
+}
+
+/* Mobile layout */
+@media (max-width: 1024px) {
+  .layout-container {
+    flex-direction: column;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .chat-section {
+    min-width: auto;
+    max-height: 400px;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout-header {
+    padding: 16px;
+  }
+
+  .layout-container {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .game-section {
+    gap: 12px;
+  }
+
+  .chat-section {
+    max-height: 350px;
+  }
 }
 
 /* ── Title ────────────────────────────────────────────────────────────────── */
 .title {
-  font-size: 2.6rem;
+  font-size: 2.4rem;
   font-weight: 700;
   letter-spacing: -1px;
   margin: 0;
   color: var(--text-h);
+  text-align: left;
 }
 
 .subtitle {
@@ -35,14 +104,14 @@
 
 /* ── Status bar ───────────────────────────────────────────────────────────── */
 .status-bar {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 500;
   color: var(--text-h);
   background: var(--accent-bg);
   border: 1px solid var(--accent-border);
-  border-radius: 10px;
-  padding: 10px 24px;
-  text-align: center;
+  border-radius: 8px;
+  padding: 10px 16px;
+  text-align: left;
   width: 100%;
   box-sizing: border-box;
   transition: background 0.3s;
@@ -58,9 +127,9 @@
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 0.9rem;
-  text-align: center;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  text-align: left;
   max-width: 100%;
   word-break: break-word;
 }
@@ -70,8 +139,8 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  width: 100%;
-  max-width: 360px;
+  width: fit-content;
+  max-width: 320px;
 }
 
 /* ── Cell ─────────────────────────────────────────────────────────────────── */
@@ -131,17 +200,17 @@
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .restart-btn,
 .setup-btn {
-  padding: 10px 24px;
-  border-radius: 8px;
+  padding: 8px 16px;
+  border-radius: 6px;
   border: 2px solid var(--border);
   background: var(--code-bg);
   color: var(--text-h);
-  font-size: 1rem;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
@@ -155,13 +224,13 @@
 /* ── Players legend ───────────────────────────────────────────────────────── */
 .players-legend {
   display: flex;
-  gap: 20px;
-  font-size: 0.9rem;
+  gap: 16px;
+  font-size: 0.85rem;
 }
 
 .legend-item {
-  padding: 4px 12px;
-  border-radius: 20px;
+  padding: 4px 10px;
+  border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--code-bg);
 }
