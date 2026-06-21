@@ -1,7 +1,8 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 
-interface MessageProps extends React.HTMLAttributes<HTMLDivElement> {
+interface MessageProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'content'> {
   role: 'user' | 'assistant'
   content?: string | React.ReactNode
   avatar?: React.ReactNode

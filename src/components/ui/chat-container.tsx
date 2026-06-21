@@ -9,22 +9,35 @@ interface ChatContainerProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const ChatContainer = React.forwardRef<HTMLDivElement, ChatContainerProps>(
   ({ className, scrollAnchor, children, ...props }, ref) => {
-    const containerRef = React.useRef<HTMLDivElement>(null)
-    const scrollRef = scrollAnchor || React.useRef<HTMLDivElement>(null)
-    
-    const { scrollRef: stickRef } = useStickToBottom(containerRef)
+    const localAnchorRef = React.useRef<HTMLDivElement>(null)
+    const anchorRef = scrollAnchor ?? localAnchorRef
+    const { scrollRef, contentRef } = useStickToBottom()
+
+    const setContainerRef = React.useCallback(
+      (node: HTMLDivElement | null) => {
+        scrollRef(node)
+        if (typeof ref === 'function') {
+          ref(node)
+        } else if (ref) {
+          ref.current = node
+        }
+      },
+      [scrollRef, ref]
+    )
 
     return (
       <div
-        ref={containerRef}
+        ref={setContainerRef}
         className={cn(
           'flex flex-col gap-4 overflow-y-auto',
           className
         )}
         {...props}
       >
-        {children}
-        <div ref={scrollRef} className="h-0" />
+        <div ref={contentRef}>
+          {children}
+          <div ref={anchorRef} className="h-0" />
+        </div>
       </div>
     )
   }

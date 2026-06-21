@@ -1,7 +1,8 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 
-interface ReasoningProps extends React.HTMLAttributes<HTMLDetailsElement> {
+interface ReasoningProps
+  extends Omit<React.HTMLAttributes<HTMLDetailsElement>, 'content'> {
   content?: string | React.ReactNode
   isOpen?: boolean
   isStreaming?: boolean
