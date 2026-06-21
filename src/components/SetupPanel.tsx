@@ -10,7 +10,7 @@ export function SetupPanel({ onStart }: SetupPanelProps) {
   const [xType, setXType] = useState<'human' | 'agent'>('human');
   const [oType, setOType] = useState<'human' | 'agent'>('agent');
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('gemma4:e2b');
+  const [model, setModel] = useState('hf.co/mradermacher/VibeThinker-3B-i1-GGUF:Q4_K_M');
   const [baseURL, setBaseURL] = useState('http://localhost:11434/api/chat');
 
   const needsAgent = xType === 'agent' || oType === 'agent';

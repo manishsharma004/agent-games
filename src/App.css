@@ -316,98 +316,109 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 4px 2px;
+  padding: 8px 6px 4px;
 }
 
 .chat-empty {
-  padding: 16px;
-  color: var(--text);
-  font-size: 0.9rem;
-  text-align: left;
-  opacity: 0.8;
-}
-
-.chat-msg {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-width: 88%;
+  padding: 14px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--code-bg) 70%, transparent);
+  color: var(--text);
+  font-size: 0.9rem;
+  text-align: left;
 }
 
-.chat-msg--user {
+.chat-empty strong {
+  color: var(--text-h);
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 92%;
+}
+
+.chat-message--user {
   align-self: flex-end;
   align-items: flex-end;
 }
 
-.chat-msg--agent {
+.chat-message--assistant {
   align-self: flex-start;
   align-items: flex-start;
 }
 
-.chat-msg__label {
+.chat-message__meta {
   font-size: 0.72rem;
+  font-weight: 600;
   color: var(--text);
-  opacity: 0.7;
+  opacity: 0.75;
   padding: 0 4px;
 }
 
-.chat-msg__bubble {
+.chat-message__bubble {
   background: var(--code-bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 14px;
+  border-radius: 14px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.chat-msg--user .chat-msg__bubble {
+.chat-message--user .chat-message__bubble {
   background: var(--accent-bg);
   border-color: var(--accent-border);
   border-bottom-right-radius: 4px;
 }
 
-.chat-msg--agent .chat-msg__bubble {
+.chat-message--assistant .chat-message__bubble {
   border-bottom-left-radius: 4px;
 }
 
-.chat-msg__text {
+.chat-message__text {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.86rem;
   line-height: 1.5;
   color: var(--text-h);
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-.chat-msg__move {
+.chat-message__move {
   margin: 0;
   font-size: 0.78rem;
   color: var(--accent);
   font-weight: 600;
 }
 
-.chat-msg__placeholder {
+.chat-message__placeholder {
   font-size: 1rem;
   color: var(--text);
   opacity: 0.5;
   letter-spacing: 2px;
 }
 
-/* ── Thinking collapsible ─────────────────────────────────────────────────── */
 .chat-thinking {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.45);
 }
 
 .chat-thinking__summary {
-  padding: 5px 10px;
-  font-size: 0.75rem;
+  padding: 6px 10px;
+  font-size: 0.74rem;
   font-weight: 600;
   cursor: pointer;
   color: var(--text-h);
-  background: var(--accent-bg);
+  background: color-mix(in srgb, var(--accent-bg) 80%, transparent);
   user-select: none;
   list-style: none;
   display: flex;
@@ -438,7 +449,7 @@
   white-space: pre-wrap;
   word-break: break-word;
   font-family: inherit;
-  background: var(--code-bg);
+  background: transparent;
 }
 
 /* ── Setup panel ──────────────────────────────────────────────────────────── */
