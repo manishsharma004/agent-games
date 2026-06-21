@@ -11,13 +11,13 @@ export function SetupPanel({ onStart }: SetupPanelProps) {
   const [oType, setOType] = useState<'human' | 'agent'>('agent');
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('hf.co/mradermacher/VibeThinker-3B-i1-GGUF:Q4_K_M');
-  const [baseURL, setBaseURL] = useState('http://localhost:11434/api/chat');
+  const [baseURL, setBaseURL] = useState('http://192.168.29.30:11434/api/chat');
 
   const needsAgent = xType === 'agent' || oType === 'agent';
 
   function handleStart() {
-    const agentConfig: AgentConfig | undefined = needsAgent && apiKey
-      ? { apiKey, model, baseURL }
+    const agentConfig: AgentConfig | undefined = needsAgent
+      ? { apiKey: apiKey.trim(), model, baseURL: baseURL.trim() || 'http://192.168.29.30:11434/api/chat' }
       : undefined;
     onStart({ X: xType, O: oType }, agentConfig);
   }

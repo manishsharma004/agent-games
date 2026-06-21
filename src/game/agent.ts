@@ -231,13 +231,16 @@ export async function agentMove(
   onToken?: (type: 'thinking' | 'content', token: string) => void,
 ): Promise<Position> {
   const { apiKey, baseURL = 'https://api.openai.com/v1', model = 'gpt-4o-mini' } = config;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (apiKey) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
 
   const response = await fetch(`${baseURL}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
+    headers,
     body: JSON.stringify({
       model,
       messages: [
