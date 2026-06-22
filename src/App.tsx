@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { GameBoard } from './components/GameBoard'
 import { SetupPanel } from './components/SetupPanel'
 import ChatUI from './components/ChatUI'
+import type { ToolPart } from './components/ui/tool'
 import type { AgentConfig } from './game/agent'
 import { agentMove, buildUserPrompt } from './game/agent'
 import { applyMove, createInitialState, startGame } from './game/engine'
@@ -14,6 +15,7 @@ interface ChatMessage {
   text: string
   thinking?: string
   move?: number
+  tools?: ToolPart[]
 }
 
 function App() {
@@ -40,10 +42,25 @@ function App() {
 
     const userMsgId = String(nextMsgId.current++)
     const agentMsgId = String(nextMsgId.current++)
+    const pendingTool: ToolPart = {
+      type: 'make_move',
+      state: 'input-streaming',
+      input: {
+        marker: gameState.currentTurn,
+      },
+      toolCallId: `make-move-${agentMsgId}`,
+    }
+
     setChatMessages((prev) => [
       ...prev,
       { id: userMsgId, role: 'user', text: buildUserPrompt(gameState) },
-      { id: agentMsgId, role: 'assistant', text: '', thinking: '' },
+      {
+        id: agentMsgId,
+        role: 'assistant',
+        text: '',
+        thinking: '',
+        tools: [pendingTool],
+      },
     ])
 
     agentMove(gameState, agentConfig, (type, token) => {
@@ -59,12 +76,53 @@ function App() {
     })
       .then((position: Position) => {
         setChatMessages((prev) =>
-          prev.map((m) => (m.id === agentMsgId ? { ...m, move: position } : m)),
+          prev.map((m) =>
+            m.id === agentMsgId
+              ? {
+                  ...m,
+                  move: position,
+                  tools: [
+                    {
+                      type: 'make_move',
+                      state: 'output-available',
+                      input: {
+                        marker: gameState.currentTurn,
+                      },
+                      output: {
+                        position,
+                      },
+                      toolCallId: `make-move-${agentMsgId}`,
+                    },
+                  ],
+                }
+              : m,
+          ),
         )
         setGameState((prev) => applyMove(prev, { position, marker: prev.currentTurn }))
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : String(err))
+        const msg = err instanceof Error ? err.message : String(err)
+        setError(msg)
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.id === agentMsgId
+              ? {
+                  ...m,
+                  tools: [
+                    {
+                      type: 'make_move',
+                      state: 'output-error',
+                      input: {
+                        marker: gameState.currentTurn,
+                      },
+                      errorText: msg,
+                      toolCallId: `make-move-${agentMsgId}`,
+                    },
+                  ],
+                }
+              : m,
+          ),
+        )
       })
       .finally(() => {
         setAgentThinking(false)

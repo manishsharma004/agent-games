@@ -40,6 +40,20 @@ function buildSystemPrompt(marker: Marker): string {
   return `You are playing Tic-Tac-Toe as marker "${marker}". 
 Use the make_move tool to place your marker. 
 Think strategically: win if possible, block the opponent, otherwise take the best available position.
+When producing thinking text, ALWAYS use this markdown structure so it can be rendered as chain-of-thought steps:
+## Step 1: Board Assessment
+- one short bullet
+- one short bullet
+
+## Step 2: Candidate Moves
+- one short bullet per candidate
+
+## Step 3: Final Decision
+- chosen move and reason
+
+Keep each bullet concise. Do not use fenced code blocks in thinking.
+Do not talk about the prompt, instructions, formatting rules, tags, or tool availability inside thinking.
+Only reason about the board state, candidate moves, and the final move choice.
 If tool calling is unavailable, return ONLY a JSON object inside <complete></complete> tags with no other text:
 <complete>
 {

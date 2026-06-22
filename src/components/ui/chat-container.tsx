@@ -1,47 +1,65 @@
-import * as React from 'react'
-import { useStickToBottom } from 'use-stick-to-bottom'
-import { cn } from '@/lib/utils'
+import { cn } from "@/lib/utils"
+import { StickToBottom } from "use-stick-to-bottom"
 
-interface ChatContainerProps extends React.HTMLAttributes<HTMLDivElement> {
-  scrollAnchor?: React.RefObject<HTMLDivElement>
-  children?: React.ReactNode
+export type ChatContainerRootProps = {
+  children: React.ReactNode
+  className?: string
+} & React.HTMLAttributes<HTMLDivElement>
+
+export type ChatContainerContentProps = {
+  children: React.ReactNode
+  className?: string
+} & React.HTMLAttributes<HTMLDivElement>
+
+export type ChatContainerScrollAnchorProps = {
+  className?: string
+  ref?: React.RefObject<HTMLDivElement>
+} & React.HTMLAttributes<HTMLDivElement>
+
+function ChatContainerRoot({
+  children,
+  className,
+  ...props
+}: ChatContainerRootProps) {
+  return (
+    <StickToBottom
+      className={cn("flex overflow-y-auto", className)}
+      resize="smooth"
+      initial="instant"
+      role="log"
+      {...props}
+    >
+      {children}
+    </StickToBottom>
+  )
 }
 
-const ChatContainer = React.forwardRef<HTMLDivElement, ChatContainerProps>(
-  ({ className, scrollAnchor, children, ...props }, ref) => {
-    const localAnchorRef = React.useRef<HTMLDivElement>(null)
-    const anchorRef = scrollAnchor ?? localAnchorRef
-    const { scrollRef, contentRef } = useStickToBottom()
+function ChatContainerContent({
+  children,
+  className,
+  ...props
+}: ChatContainerContentProps) {
+  return (
+    <StickToBottom.Content
+      className={cn("flex w-full flex-col", className)}
+      {...props}
+    >
+      {children}
+    </StickToBottom.Content>
+  )
+}
 
-    const setContainerRef = React.useCallback(
-      (node: HTMLDivElement | null) => {
-        scrollRef(node)
-        if (typeof ref === 'function') {
-          ref(node)
-        } else if (ref) {
-          ref.current = node
-        }
-      },
-      [scrollRef, ref]
-    )
+function ChatContainerScrollAnchor({
+  className,
+  ...props
+}: ChatContainerScrollAnchorProps) {
+  return (
+    <div
+      className={cn("h-px w-full shrink-0 scroll-mt-4", className)}
+      aria-hidden="true"
+      {...props}
+    />
+  )
+}
 
-    return (
-      <div
-        ref={setContainerRef}
-        className={cn(
-          'flex flex-col gap-4 overflow-y-auto',
-          className
-        )}
-        {...props}
-      >
-        <div ref={contentRef}>
-          {children}
-          <div ref={anchorRef} className="h-0" />
-        </div>
-      </div>
-    )
-  }
-)
-ChatContainer.displayName = 'ChatContainer'
-
-export { ChatContainer }
+export { ChatContainerRoot, ChatContainerContent, ChatContainerScrollAnchor }

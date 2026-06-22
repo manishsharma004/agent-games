@@ -1,4 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
+  --ui-background: 0 0% 100%;
+  --ui-foreground: 266 17% 12%;
+  --ui-card: 45 19% 95%;
+  --ui-card-foreground: 266 17% 12%;
+  --ui-popover: 0 0% 100%;
+  --ui-popover-foreground: 266 17% 12%;
+  --ui-primary: 278 100% 61%;
+  --ui-primary-foreground: 0 0% 100%;
+  --ui-secondary: 45 19% 95%;
+  --ui-secondary-foreground: 266 17% 12%;
+  --ui-muted: 45 19% 95%;
+  --ui-muted-foreground: 266 9% 44%;
+  --ui-accent: 278 100% 61%;
+  --ui-accent-foreground: 0 0% 100%;
+  --ui-destructive: 0 84% 60%;
+  --ui-destructive-foreground: 0 0% 100%;
+  --ui-border: 266 10% 90%;
+  --ui-input: 266 10% 90%;
+  --ui-ring: 278 100% 61%;
+  --ui-radius: 0.75rem;
+
   --text: #6b6375;
   --text-h: #08060d;
   --bg: #fff;
@@ -28,6 +53,26 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --ui-background: 228 15% 10%;
+    --ui-foreground: 220 17% 95%;
+    --ui-card: 228 12% 14%;
+    --ui-card-foreground: 220 17% 95%;
+    --ui-popover: 228 12% 14%;
+    --ui-popover-foreground: 220 17% 95%;
+    --ui-primary: 274 90% 70%;
+    --ui-primary-foreground: 228 15% 10%;
+    --ui-secondary: 228 12% 18%;
+    --ui-secondary-foreground: 220 17% 95%;
+    --ui-muted: 228 12% 18%;
+    --ui-muted-foreground: 220 10% 65%;
+    --ui-accent: 274 90% 70%;
+    --ui-accent-foreground: 228 15% 10%;
+    --ui-destructive: 0 63% 48%;
+    --ui-destructive-foreground: 220 17% 95%;
+    --ui-border: 228 10% 22%;
+    --ui-input: 228 10% 22%;
+    --ui-ring: 274 90% 70%;
+
     --text: #9ca3af;
     --text-h: #f3f4f6;
     --bg: #16171d;
@@ -43,11 +88,11 @@
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  text-align: left;
+  border-inline: none;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
