@@ -10,14 +10,14 @@ export function SetupPanel({ onStart }: SetupPanelProps) {
   const [xType, setXType] = useState<'human' | 'agent'>('human');
   const [oType, setOType] = useState<'human' | 'agent'>('agent');
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('hf.co/mradermacher/VibeThinker-3B-i1-GGUF:Q4_K_M');
-  const [baseURL, setBaseURL] = useState('http://192.168.29.30:11434/api/chat');
+  const [model, setModel] = useState('gemma4:e2b');
+  const [baseURL, setBaseURL] = useState('http://localhost:11434/api/chat');
 
   const needsAgent = xType === 'agent' || oType === 'agent';
 
   function handleStart() {
     const agentConfig: AgentConfig | undefined = needsAgent
-      ? { apiKey: apiKey.trim(), model, baseURL: baseURL.trim() || 'http://192.168.29.30:11434/api/chat' }
+      ? { apiKey: apiKey.trim(), model, baseURL: baseURL.trim() || 'http://localhost:11434/api/chat' }
       : undefined;
     onStart({ X: xType, O: oType }, agentConfig);
   }

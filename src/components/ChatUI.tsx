@@ -1,4 +1,5 @@
 import React from 'react'
+import { BoardPreview } from './BoardPreview'
 import {
   ChatContainerContent,
   ChatContainerRoot,
@@ -20,11 +21,13 @@ import {
 } from './ui/chain-of-thought'
 import { Tool, type ToolPart } from './ui/tool'
 import { cn } from '@/lib/utils'
+import type { Board } from '../game/types'
 
 interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   text: string
+  board?: Board
   thinking?: string
   move?: number
   tools?: ToolPart[]
@@ -57,8 +60,11 @@ function normalizeReasoningLayout(text: string): string {
 function shouldFoldIntoReasoning(text: string): boolean {
   if (!text) return false
 
-  // Keep tactical/tooling chatter out of the visible assistant bubble.
-  return /make_move|current board|available positions|your turn|tool|position\s*[:=]/i.test(text)
+  // Keep tactical/tooling chatter and chain-of-thought steps out of the visible bubble.
+  return (
+    /make_move|current board|available positions|your turn|tool|position\s*[:=]/i.test(text) ||
+    /^##\s*Step\s*\d+/m.test(text)
+  )
 }
 
 function splitAssistantContent(text: string): { visibleText: string; extractedThinking: string } {
@@ -137,6 +143,12 @@ export const ChatUI: React.FC<ChatUIProps> = ({ messages, className, isStreaming
 
             if (msg.role === 'user') {
               const isBoardPrompt = msg.text.includes('Current board:')
+              const availableMatch = msg.text.match(/Available positions:\s*([\d,\s]+)/)
+              const available = availableMatch?.[1]
+                ?.split(',')
+                .map((n) => n.trim())
+                .filter(Boolean)
+              const turnMatch = msg.text.match(/Your turn \(([XO])\)/)
 
               return (
                 <Message
@@ -145,9 +157,18 @@ export const ChatUI: React.FC<ChatUIProps> = ({ messages, className, isStreaming
                 >
                   <MessageAvatar alt="You" src="" fallback="You" className="h-9 w-9" />
                   <div className="pk-message-content pk-message-content--user">
-                    {isBoardPrompt ? (
-                      <div className="pk-message-bubble rounded-lg bg-secondary p-2 text-foreground">
-                        <pre className="pk-chat-pre">{msg.text}</pre>
+                    {isBoardPrompt && msg.board ? (
+                      <div className="pk-message-bubble rounded-lg bg-secondary px-3 py-2 text-foreground">
+                        <div className="pk-board-prompt">
+                          <span className="pk-board-prompt__label">Current board</span>
+                          <BoardPreview board={msg.board} />
+                          {available && available.length > 0 && (
+                            <span className="pk-board-prompt__meta">
+                              Open: {available.join(', ')}
+                              {turnMatch ? ` · Turn ${turnMatch[1]}` : ''}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <MessageContent markdown className="pk-message-bubble pk-markdown">

@@ -6,13 +6,14 @@ import type { ToolPart } from './components/ui/tool'
 import type { AgentConfig } from './game/agent'
 import { agentMove, buildUserPrompt } from './game/agent'
 import { applyMove, createInitialState, startGame } from './game/engine'
-import type { GameState, PlayerConfig, Position } from './game/types'
+import type { Board, GameState, PlayerConfig, Position } from './game/types'
 import './App.css'
 
 interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   text: string
+  board?: Board
   thinking?: string
   move?: number
   tools?: ToolPart[]
@@ -53,7 +54,7 @@ function App() {
 
     setChatMessages((prev) => [
       ...prev,
-      { id: userMsgId, role: 'user', text: buildUserPrompt(gameState) },
+      { id: userMsgId, role: 'user', text: buildUserPrompt(gameState), board: gameState.board },
       {
         id: agentMsgId,
         role: 'assistant',
@@ -171,7 +172,7 @@ function App() {
 
   if (gameState.status === 'idle') {
     return (
-      <div className="app">
+      <div className="app app--setup">
         <SetupPanel onStart={handleStart} />
       </div>
     )

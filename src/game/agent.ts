@@ -37,32 +37,29 @@ function boardToString(board: Board): string {
 }
 
 function buildSystemPrompt(marker: Marker): string {
-  return `You are playing Tic-Tac-Toe as marker "${marker}". 
-Use the make_move tool to place your marker. 
-Think strategically: win if possible, block the opponent, otherwise take the best available position.
-When producing thinking text, ALWAYS use this markdown structure so it can be rendered as chain-of-thought steps:
+  return `You are playing Tic-Tac-Toe as marker "${marker}".
+
+Your response has TWO parts in this order:
+
+PART 1 — Reasoning (markdown only):
 ## Step 1: Board Assessment
-- one short bullet
-- one short bullet
-
+- one short bullet about the board
 ## Step 2: Candidate Moves
-- one short bullet per candidate
-
+- one short bullet per candidate move
 ## Step 3: Final Decision
-- chosen move and reason
+- the chosen position and why
 
-Keep each bullet concise. Do not use fenced code blocks in thinking.
-Do not talk about the prompt, instructions, formatting rules, tags, or tool availability inside thinking.
-Only reason about the board state, candidate moves, and the final move choice.
-If tool calling is unavailable, return ONLY a JSON object inside <complete></complete> tags with no other text:
-<complete>
-{
-  "name": "make_move",
-  "arguments": {
-    "position": 0
-  }
-}
-</complete>`;
+PART 2 — Move (exactly one line, must be the last line of your response):
+<call>{"name":"make_move","arguments":{"position":4}}</call>
+
+Replace 4 with your chosen position (0-8). Copy the JSON format exactly: no spaces inside tags except as shown, no code fences, no XML, no extra text after </call>.
+
+Rules:
+- Win if you can, block if needed, otherwise pick the best open square.
+- Use only positions listed in "Available positions".
+- Keep bullets short. No code blocks in reasoning.
+- In reasoning, talk ONLY about the board and moves. Never mention tags, JSON, tools, prompts, or instructions.
+- If your API supports the make_move tool directly, call it instead of writing the <call> line.`;
 }
 
 export function buildUserPrompt(state: GameState): string {
@@ -74,6 +71,7 @@ interface LLMMessage {
   content?: string;
   tool_calls?: Array<{
     function?: {
+      name?: string;
       arguments?: string | MakeMoveToolInput;
     };
   }>;
@@ -90,106 +88,114 @@ function getAssistantMessage(data: unknown): LLMMessage | null {
   return response.message ?? response.choices?.[0]?.message ?? null;
 }
 
-function parseCompleteBlock(content: string): MakeMoveToolInput {
-  const matches = [...content.matchAll(/<complete>([\s\S]*?)<\/complete>/g)];
-  const block = matches.at(-1)?.[1]?.trim();
-
-  if (!block) {
-    throw new Error('No <complete> block returned by agent');
-  }
-
-  try {
-    const parsed = JSON.parse(block);
-
-    // Handle nested structure: {"name": "make_move", "arguments": {"position": 0}}
-    if (parsed && typeof parsed === 'object' && 'arguments' in parsed && parsed.arguments) {
-      const position = parsed.arguments.position;
-      if (typeof position === 'number' && position >= 0 && position <= 8) {
-        return { position: position as Position };
-      }
-      throw new Error(`Invalid position value: ${position}`);
-    }
-
-    // Handle direct structure: {"position": 0}
-    if (parsed && typeof parsed === 'object' && 'position' in parsed) {
-      const position = parsed.position;
-      if (typeof position === 'number' && position >= 0 && position <= 8) {
-        return { position: position as Position };
-      }
-      throw new Error(`Invalid position value: ${position}`);
-    }
-
-    throw new Error('Missing position in parsed JSON');
-  } catch (error) {
-    throw new Error(`Failed to parse <complete> block JSON: ${error instanceof Error ? error.message : String(error)}\n\nBlock content: ${block}`);
-  }
+function isValidPosition(value: unknown): value is Position {
+  const n = typeof value === 'string' ? Number.parseInt(value, 10) : value;
+  return typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= 8;
 }
 
-function parseCallBlock(content: string): MakeMoveToolInput {
-  const matches = [...content.matchAll(/<call>([\s\S]*?)<\/call>/g)];
-  const block = matches.at(-1)?.[1];
+function parseMovePayload(raw: unknown): MakeMoveToolInput | null {
+  if (raw === null || raw === undefined) return null;
 
-  if (!block) {
-    throw new Error('No <call> block returned by agent');
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+
+    try {
+      return parseMovePayload(JSON.parse(trimmed));
+    } catch {
+      const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          return parseMovePayload(JSON.parse(jsonMatch[0]));
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    }
   }
 
-  const nameMatch = block.match(/<name>([\s\S]*?)<\/name>/);
-  const argsMatch = block.match(/<args>([\s\S]*?)<\/args>/);
-  const name = nameMatch?.[1]?.trim();
-  const args = argsMatch?.[1]?.trim();
+  if (typeof raw !== 'object') return null;
 
-  if (name !== 'make_move') {
-    throw new Error(`Unexpected call name returned by agent: ${name ?? 'unknown'}`);
+  const obj = raw as Record<string, unknown>;
+
+  if (obj.arguments && typeof obj.arguments === 'object') {
+    return parseMovePayload(obj.arguments);
   }
 
-  if (!args) {
-    throw new Error('No <args> payload returned inside <call> block');
+  if ('position' in obj && isValidPosition(obj.position)) {
+    const position = typeof obj.position === 'string'
+      ? Number.parseInt(obj.position, 10)
+      : obj.position;
+    return { position: position as Position };
   }
 
-  return JSON.parse(args) as MakeMoveToolInput;
+  return null;
 }
 
-function parseRangesetBlock(content: string): MakeMoveToolInput {
-  const matches = [...content.matchAll(/<rangeset>([\s\S]*?)<\/rangeset>/g)];
-  const block = matches.at(-1)?.[1]?.trim();
+function parseCallXmlBlock(block: string): MakeMoveToolInput | null {
+  const nameMatch = block.match(/<name>\s*([\s\S]*?)\s*<\/name>/i);
+  const argsMatch = block.match(/<args>\s*([\s\S]*?)\s*<\/args>/i);
 
-  if (!block) {
-    throw new Error('No <rangeset> block returned by agent');
+  if (!nameMatch || !argsMatch) return null;
+
+  const name = nameMatch[1].trim();
+  if (name !== 'make_move') return null;
+
+  return parseMovePayload(argsMatch[1].trim());
+}
+
+function parseTaggedBlock(block: string): MakeMoveToolInput | null {
+  const trimmed = block.trim();
+  if (!trimmed) return null;
+
+  const xmlResult = parseCallXmlBlock(trimmed);
+  if (xmlResult) return xmlResult;
+
+  return parseMovePayload(trimmed);
+}
+
+function extractMoveFromContent(content: string): MakeMoveToolInput | null {
+  const tagPatterns = [
+    /<call>([\s\S]*?)<\/call>/gi,
+    /<complete>([\s\S]*?)<\/complete>/gi,
+    /<rangeset>([\s\S]*?)<\/rangeset>/gi,
+  ];
+
+  for (const pattern of tagPatterns) {
+    const matches = [...content.matchAll(pattern)];
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const result = parseTaggedBlock(matches[i][1] ?? '');
+      if (result) return result;
+    }
   }
 
-  try {
-    const parsed = JSON.parse(block);
-
-    // Handle nested structure: {"name": "make_move", "arguments": {"position": 0}}
-    if (parsed && typeof parsed === 'object' && 'arguments' in parsed && parsed.arguments) {
-      const position = parsed.arguments.position;
-      if (typeof position === 'number' && position >= 0 && position <= 8) {
-        return { position: position as Position };
-      }
-      throw new Error(`Invalid position value: ${position}`);
-    }
-
-    // Handle direct structure: {"position": 0}
-    if (parsed && typeof parsed === 'object' && 'position' in parsed) {
-      const position = parsed.position;
-      if (typeof position === 'number' && position >= 0 && position <= 8) {
-        return { position: position as Position };
-      }
-      throw new Error(`Invalid position value: ${position}`);
-    }
-
-    throw new Error('Missing position in parsed JSON');
-  } catch (error) {
-    throw new Error(`Failed to parse <rangeset> block JSON: ${error instanceof Error ? error.message : String(error)}\n\nBlock content: ${block}`);
+  const jsonObjects = [...content.matchAll(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g)];
+  for (let i = jsonObjects.length - 1; i >= 0; i--) {
+    const result = parseMovePayload(jsonObjects[i][0]);
+    if (result) return result;
   }
+
+  const positionMatches = [...content.matchAll(/"position"\s*:\s*([0-8])/g)];
+  const lastPosition = positionMatches.at(-1)?.[1];
+  if (lastPosition !== undefined) {
+    return { position: Number.parseInt(lastPosition, 10) as Position };
+  }
+
+  return null;
 }
 
 function normalizeMoveInput(input: string | MakeMoveToolInput): MakeMoveToolInput {
   if (typeof input === 'string') {
-    return JSON.parse(input) as MakeMoveToolInput;
+    const parsed = parseMovePayload(input);
+    if (parsed) return parsed;
+    throw new Error(`Invalid tool arguments JSON: ${input}`);
   }
 
-  return input;
+  const parsed = parseMovePayload(input);
+  if (parsed) return parsed;
+
+  throw new Error('Invalid tool arguments payload');
 }
 
 function extractMoveInput(data: unknown): MakeMoveToolInput {
@@ -201,32 +207,31 @@ function extractMoveInput(data: unknown): MakeMoveToolInput {
 
   const toolCall = message.tool_calls?.[0];
   if (toolCall?.function?.arguments) {
+    const name = toolCall.function.name;
+    if (name && name !== 'make_move') {
+      throw new Error(`Unexpected tool name returned by agent: ${name}`);
+    }
     return normalizeMoveInput(toolCall.function.arguments);
   }
 
   if (typeof message.content === 'string') {
-    // Try parsing in order: <complete>, <rangeset>, <call>
-    try {
-      return parseCompleteBlock(message.content);
-    } catch (completeError) {
-      try {
-        return parseRangesetBlock(message.content);
-      } catch (rangesetError) {
-        try {
-          return parseCallBlock(message.content);
-        } catch (callError) {
-          throw new Error(
-            `Failed to parse any block format:\n` +
-            `- <complete>: ${completeError instanceof Error ? completeError.message : String(completeError)}\n` +
-            `- <rangeset>: ${rangesetError instanceof Error ? rangesetError.message : String(rangesetError)}\n` +
-            `- <call>: ${callError instanceof Error ? callError.message : String(callError)}`
-          );
-        }
-      }
-    }
+    const move = extractMoveFromContent(message.content);
+    if (move) return move;
+
+    throw new Error(
+      'No move found in response. Expected a make_move tool call or a final line like ' +
+      '<call>{"name":"make_move","arguments":{"position":4}}</call>',
+    );
   }
 
-  throw new Error('No tool call or fallback block returned by agent');
+  throw new Error('No tool call or move block returned by agent');
+}
+
+function resolveMovePosition(
+  input: MakeMoveToolInput,
+  available: Position[],
+): Position {
+  return available.includes(input.position) ? input.position : available[0];
 }
 
 // ── Agent config ────────────────────────────────────────────────────────────
@@ -262,7 +267,7 @@ export async function agentMove(
         { role: 'user', content: buildUserPrompt(state) },
       ],
       tools: [MAKE_MOVE_TOOL],
-      tool_choice: { type: 'function', function: { name: 'make_move' } },
+      tool_choice: 'auto',
       stream: true,
     }),
   });
@@ -311,7 +316,12 @@ export async function agentMove(
             delta?: {
               content?: string;
               reasoning_content?: string;
-              tool_calls?: Array<{ function?: { arguments?: string } }>;
+              tool_calls?: Array<{ function?: { name?: string; arguments?: string } }>;
+            };
+            message?: {
+              content?: string;
+              thinking?: string;
+              tool_calls?: Array<{ function?: { name?: string; arguments?: MakeMoveToolInput | string } }>;
             };
           }>;
           // Ollama native format
@@ -333,14 +343,19 @@ export async function agentMove(
             fullContent += delta.content;
             onToken?.('content', delta.content);
           }
-          if (delta.tool_calls?.[0]?.function?.arguments) {
-            toolCallArgs += delta.tool_calls[0].function.arguments;
+          const fn = delta.tool_calls?.[0]?.function;
+          if (fn?.arguments) {
+            toolCallArgs += fn.arguments;
+          }
+          if (fn?.arguments && fn.name === 'make_move') {
+            const parsed = parseMovePayload(toolCallArgs);
+            if (parsed) resolvedToolInput = parsed;
           }
           continue;
         }
 
         // ── Ollama NDJSON message ─────────────────────────────────────────
-        const msg = chunk.message;
+        const msg = chunk.message ?? chunk.choices?.[0]?.message;
         if (msg) {
           if (msg.thinking) {
             onToken?.('thinking', msg.thinking);
@@ -349,12 +364,13 @@ export async function agentMove(
             fullContent += msg.content;
             onToken?.('content', msg.content);
           }
-          // Ollama tool calls arrive with already-parsed arguments objects
-          if (msg.tool_calls?.[0]?.function?.arguments) {
-            const args = msg.tool_calls[0].function.arguments;
-            resolvedToolInput = normalizeMoveInput(
-              typeof args === 'string' ? args : JSON.stringify(args),
-            );
+          const fn = msg.tool_calls?.[0]?.function;
+          if (fn?.arguments) {
+            const args = fn.arguments;
+            const parsed = parseMovePayload(typeof args === 'string' ? args : args);
+            if (parsed && (!fn.name || fn.name === 'make_move')) {
+              resolvedToolInput = parsed;
+            }
           }
         }
       } catch {
@@ -365,19 +381,18 @@ export async function agentMove(
 
   const available = getAvailablePositions(state.board);
 
-  // Prefer structured tool call if present (Ollama resolves args eagerly; OpenAI accumulates a string)
-  const toolInput = resolvedToolInput ?? (toolCallArgs ? normalizeMoveInput(toolCallArgs) : null);
+  const streamedToolInput = toolCallArgs ? parseMovePayload(toolCallArgs) : null;
+  const toolInput = resolvedToolInput ?? streamedToolInput;
   if (toolInput) {
-    return available.includes(toolInput.position as Position)
-      ? (toolInput.position as Position)
-      : available[0];
+    return resolveMovePosition(toolInput, available);
   }
 
-  // Fall back to parsing content blocks
+  const contentMove = extractMoveFromContent(fullContent);
+  if (contentMove) {
+    return resolveMovePosition(contentMove, available);
+  }
+
   const fakeData = { choices: [{ message: { content: fullContent } }] };
   const input = extractMoveInput(fakeData);
-  const position = available.includes(input.position as Position)
-    ? (input.position as Position)
-    : available[0];
-  return position;
+  return resolveMovePosition(input, available);
 }
